@@ -46,6 +46,9 @@ uv sync
 # Start backend server
 cd backend && uv run uvicorn app:app --reload --port 8000
 
+# Run tests
+cd backend && uv run pytest tests/ -v
+
 # Application runs at:
 # - Web Interface: http://localhost:8000
 # - API Docs: http://localhost:8000/docs
@@ -112,9 +115,31 @@ Supports: **PDF, DOCX, TXT** files
 
 ## Testing and Development
 
+### Testing
+
+The project includes comprehensive test coverage:
+
+- **Unit Tests**: Individual component testing (CourseSearchTool, VectorStore, AIGenerator)  
+- **Integration Tests**: RAG system end-to-end testing
+- **API Tests**: FastAPI endpoint testing
+
+```bash
+# Run all tests
+cd backend && uv run pytest tests/ -v
+
+# Run specific test file  
+cd backend && uv run pytest tests/test_course_search_tool.py -v
+
+# Run with coverage (requires pytest-cov: uv add pytest-cov)
+cd backend && uv run pytest tests/ --cov=. --cov-report=html
+```
+
+### Development Guidelines
+
 Since this is a RAG system with AI components:
 - Test with sample course documents in `/docs/`
 - Verify ChromaDB storage at `./backend/chroma_db/`
 - Monitor API logs for tool usage and search results
 - Test different question types (general vs course-specific)
 - Validate source attribution and clickable links
+- **Always use `uv` for dependency management and running commands**

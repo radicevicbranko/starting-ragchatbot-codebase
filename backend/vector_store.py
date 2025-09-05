@@ -100,16 +100,27 @@ class VectorStore:
             return SearchResults.empty(f"Search error: {str(e)}")
     
     def _resolve_course_name(self, course_name: str) -> Optional[str]:
-        """Use vector search to find best matching course by name"""
+        """Use vector search to find best matching course by name with similarity threshold"""
         try:
             results = self.course_catalog.query(
                 query_texts=[course_name],
                 n_results=1
             )
             
-            if results['documents'][0] and results['metadatas'][0]:
-                # Return the title (which is now the ID)
-                return results['metadatas'][0][0]['title']
+            if results['documents'][0] and results['metadatas'][0] and results['distances'][0]:
+                # Check similarity threshold (ChromaDB uses distance, lower is better)
+                # Distance of 1.0+ indicates poor match for short text like course names
+                distance = results['distances'][0][0]
+                
+                # For course names, be more strict with matching
+                SIMILARITY_THRESHOLD = 0.8  # Allow moderate similarity
+                
+                if distance <= SIMILARITY_THRESHOLD:
+                    # Return the title (which is now the ID)
+                    return results['metadatas'][0][0]['title']
+                else:
+                    print(f"Course name '{course_name}' rejected due to poor similarity (distance: {distance})")
+                    
         except Exception as e:
             print(f"Error resolving course name: {e}")
         

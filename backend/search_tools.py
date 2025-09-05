@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, Protocol
+from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
 from vector_store import VectorStore, SearchResults
 
@@ -62,28 +62,39 @@ class CourseSearchTool(Tool):
             Formatted search results or error message
         """
         
-        # Use the vector store's unified search interface
-        results = self.store.search(
-            query=query,
-            course_name=course_name,
-            lesson_number=lesson_number
-        )
+        # Input validation
+        if query is None:
+            return "Error: Search query cannot be None."
         
-        # Handle errors
-        if results.error:
-            return results.error
-        
-        # Handle empty results
-        if results.is_empty():
-            filter_info = ""
-            if course_name:
-                filter_info += f" in course '{course_name}'"
-            if lesson_number:
-                filter_info += f" in lesson {lesson_number}"
-            return f"No relevant content found{filter_info}."
-        
-        # Format and return results
-        return self._format_results(results)
+        try:
+            # Use the vector store's unified search interface
+            results = self.store.search(
+                query=query,
+                course_name=course_name,
+                lesson_number=lesson_number
+            )
+            
+            # Handle errors from vector store
+            if results.error:
+                return results.error
+            
+            # Handle empty results
+            if results.is_empty():
+                filter_info = ""
+                if course_name:
+                    filter_info += f" in course '{course_name}'"
+                if lesson_number:
+                    filter_info += f" in lesson {lesson_number}"
+                return f"No relevant content found{filter_info}."
+            
+            # Format and return results
+            return self._format_results(results)
+            
+        except Exception as e:
+            # Handle any unexpected errors gracefully
+            error_msg = f"Search failed due to an internal error: {str(e)}"
+            print(f"CourseSearchTool error: {e}")  # Log for debugging
+            return error_msg
     
     def _format_results(self, results: SearchResults) -> str:
         """Format search results with course and lesson context"""
