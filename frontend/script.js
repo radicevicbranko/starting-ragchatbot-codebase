@@ -5,7 +5,7 @@ const API_URL = "/api";
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton, themeToggle, sidebarThemeToggle;
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
@@ -16,8 +16,11 @@ document.addEventListener("DOMContentLoaded", () => {
   totalCourses = document.getElementById("totalCourses");
   courseTitles = document.getElementById("courseTitles");
   newChatButton = document.getElementById("newChatButton");
+  themeToggle = document.getElementById("themeToggle");
+  sidebarThemeToggle = document.getElementById("sidebarThemeToggle");
 
   setupEventListeners();
+  initializeTheme();
   createNewSession();
   loadCourseStats();
 });
@@ -33,6 +36,14 @@ function setupEventListeners() {
   // New Chat button
   if (newChatButton) {
     newChatButton.addEventListener("click", startNewChat);
+  }
+
+  // Theme toggle buttons
+  if (themeToggle) {
+    themeToggle.addEventListener("click", toggleTheme);
+  }
+  if (sidebarThemeToggle) {
+    sidebarThemeToggle.addEventListener("click", toggleTheme);
   }
 
   // Suggested questions
@@ -238,3 +249,30 @@ async function loadCourseStats() {
     }
   }
 }
+
+// Theme Functions
+function initializeTheme() {
+  // Check for saved theme preference or default to 'dark'
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  
+  // Update the theme
+  document.documentElement.setAttribute('data-theme', newTheme);
+  
+  // Save the preference
+  localStorage.setItem('theme', newTheme);
+}
+
+// Add keyboard support for theme toggle
+document.addEventListener('keydown', (e) => {
+  // Toggle theme with Ctrl+Shift+T (or Cmd+Shift+T on Mac)
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+    e.preventDefault();
+    toggleTheme();
+  }
+});
