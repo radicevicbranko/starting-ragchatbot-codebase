@@ -186,3 +186,124 @@ def tool_manager(course_search_tool, course_outline_tool):
     manager.register_tool(course_search_tool)
     manager.register_tool(course_outline_tool)
     return manager
+
+
+@pytest.fixture
+def mock_rag_system():
+    """Mock RAG system for API testing"""
+    mock_rag = Mock()
+    
+    # Default successful query response
+    mock_rag.query.return_value = (
+        "This is a test response about machine learning.",
+        [{"text": "Introduction to ML - Lesson 1", "url": "https://example.com/ml/lesson1"}]
+    )
+    
+    # Default session creation
+    mock_rag.session_manager.create_session.return_value = "test-session-123"
+    
+    # Default course analytics
+    mock_rag.get_course_analytics.return_value = {
+        "total_courses": 2,
+        "course_titles": ["Introduction to Machine Learning", "Advanced Python Programming"]
+    }
+    
+    # Default course folder loading
+    mock_rag.add_course_folder.return_value = (2, 15)  # 2 courses, 15 chunks
+    
+    return mock_rag
+
+
+@pytest.fixture
+def test_app_factory():
+    """Factory for creating test apps with mocked dependencies"""
+    def create_test_app(mock_rag=None):
+        """Create FastAPI test app with mocked RAG system"""
+        from fastapi import FastAPI, HTTPException
+        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.middleware.trustedhost import TrustedHostMiddleware
+        from pydantic import BaseModel
+        from typing import List, Optional, Union, Dict
+        
+        # Create test app without static file mounting to avoid frontend dependency
+        app = FastAPI(title="Course Materials RAG System - Test", root_path="")
+        
+        # Add middleware
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+            expose_headers=["*"],
+        )
+        
+        # Use provided mock or create default
+        if mock_rag is None:
+            mock_rag = Mock()
+            mock_rag.query.return_value = ("Test response", [])
+            mock_rag.session_manager.create_session.return_value = "test-session"
+            mock_rag.get_course_analytics.return_value = {"total_courses": 0, "course_titles": []}
+        
+        # Pydantic models (duplicated to avoid import issues in tests)
+        class QueryRequest(BaseModel):
+            query: str
+            session_id: Optional[str] = None
+
+        class QueryResponse(BaseModel):
+            answer: str
+            sources: List[Union[str, Dict[str, str]]]
+            session_id: str
+
+        class CourseStats(BaseModel):
+            total_courses: int
+            course_titles: List[str]
+        
+        # API endpoints
+        @app.post("/api/query", response_model=QueryResponse)
+        async def query_documents(request: QueryRequest):
+            try:
+                session_id = request.session_id
+                if not session_id:
+                    session_id = mock_rag.session_manager.create_session()
+                
+                answer, sources = mock_rag.query(request.query, session_id)
+                
+                return QueryResponse(
+                    answer=answer,
+                    sources=sources,
+                    session_id=session_id
+                )
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @app.get("/api/courses", response_model=CourseStats)
+        async def get_course_stats():
+            try:
+                analytics = mock_rag.get_course_analytics()
+                return CourseStats(
+                    total_courses=analytics["total_courses"],
+                    course_titles=analytics["course_titles"]
+                )
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @app.get("/health")
+        async def health_check():
+            return {"status": "healthy"}
+        
+        return app, mock_rag
+    
+    return create_test_app
+
+
+@pytest.fixture
+def test_client(test_app_factory, mock_rag_system):
+    """Test client with default mocked RAG system"""
+    from fastapi.testclient import TestClient
+    
+    app, rag_mock = test_app_factory(mock_rag_system)
+    client = TestClient(app)
+    
+    return client, rag_mock
