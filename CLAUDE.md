@@ -54,6 +54,28 @@ cd backend && uv run pytest tests/ -v
 # - API Docs: http://localhost:8000/docs
 ```
 
+### Code Quality Commands
+
+```bash
+# Format code with Black and Ruff
+uv run black backend/ main.py
+uv run ruff format backend/ main.py
+uv run ruff check --fix backend/ main.py
+
+# Run type checking
+uv run mypy backend/ main.py
+
+# Run linting checks only
+uv run ruff check backend/ main.py
+
+# Complete quality check (format + lint + test)
+./scripts/quality-check.sh
+
+# Individual scripts
+./scripts/format.sh    # Format code only
+./scripts/lint.sh      # Lint and type check only
+```
+
 ### Environment Setup
 Create `.env` file in root:
 ```
@@ -143,3 +165,11 @@ Since this is a RAG system with AI components:
 - Test different question types (general vs course-specific)
 - Validate source attribution and clickable links
 - **Always use `uv` for dependency management and running commands**
+
+#### Code Quality Standards
+- **Black**: Automatic code formatting (line length: 88)
+- **Ruff**: Fast linting and import organization
+- **MyPy**: Static type checking with strict settings
+- **Run quality checks before committing**: Use `./scripts/quality-check.sh`
+- **Consistent formatting**: All code is formatted with Black and Ruff
+- **Type hints required**: MyPy enforces type annotations
